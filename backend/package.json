@@ -1,0 +1,29 @@
+{
+  "name": "simlog-hw-unimus-backend",
+  "version": "1.0.0",
+  "description": "Backend API - Sistem Informasi Manajemen Logistik HW UNIMUS",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "hash-password": "node src/utils/hashPassword.js",
+    "reset-admin-password": "node src/utils/resetAdminPassword.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
