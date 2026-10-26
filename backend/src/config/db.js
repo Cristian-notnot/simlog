@@ -1,30 +1,30 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'simlog_hw_unimus',
- 
-  ssl: process.env.DB_PORT === '4000' ? { minVersion: 'TLSv1.2', rejectUnauthorized: true } : null,
+  host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',   
+  port: 4000,                                               
+  user: '3QDiR9H3m7wx4fU.root',                             
+  password: 'root',                
+  database: 'sistem_informasi_logistik',                   
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: false          
+  },
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 0,
   dateStrings: true,
-  connectTimeout: 8000, 
-  multipleStatements: false,
+  connectTimeout: 10000,
 });
 
 async function testConnection() {
   try {
     const conn = await pool.getConnection();
-    console.log('[DB] Koneksi ke database berhasil terhubung.');
+    console.log('[DB] Koneksi berhasil');
     conn.release();
   } catch (err) {
-    console.error('[DB] Gagal konek ke database:', err.message);
+    console.error('[DB] Gagal:', err.message);
   }
 }
 
-module.exports = { pool, testConnection }; 
+module.exports = { pool, testConnection };
