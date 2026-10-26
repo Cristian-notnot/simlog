@@ -38,6 +38,14 @@ function ImageCropEditor({ file, aspectRatio, onCancel, onApply }) {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape' && !processing) onCancel();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [onCancel, processing]);
+
+  useEffect(() => {
     const objectUrl = URL.createObjectURL(file);
     setSourceUrl(objectUrl);
     setImage(null);
@@ -173,7 +181,15 @@ function ImageCropEditor({ file, aspectRatio, onCancel, onApply }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="crop-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !processing) onCancel();
+      }}
+    >
       <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>

@@ -11,6 +11,7 @@ router.use(require('./materialRoutes'));
 router.use(require('./homepageRoutes'));
 
 router.use('/admin/alumni', require('./alumniRoutes'));
+router.use('/admin/pengurus', require('./pengurusRoutes'));
 
 
 module.exports = router;

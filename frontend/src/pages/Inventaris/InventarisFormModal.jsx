@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getInventarisPhotoUrl } from '../../utils/inventarisPhotoUrl';
 
 export default function InventarisFormModal({
   item,
@@ -28,6 +29,14 @@ export default function InventarisFormModal({
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  useEffect(() => {
 
   if (item) {
 
@@ -44,11 +53,17 @@ export default function InventarisFormModal({
       catatan: item.catatan || ''
     });
 
-    setPreviewFoto(item.foto_url || '');
+    setPreviewFoto(item.foto_url || item.foto || '');
 
   }
 
 }, [item]);
+
+  useEffect(() => {
+    if (!previewFoto.startsWith('blob:')) return undefined;
+    return () => URL.revokeObjectURL(previewFoto);
+  }, [previewFoto]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -82,11 +97,18 @@ export default function InventarisFormModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto">
         <div className="mb-4 flex justify-between border-b pb-3">
           <h3 className="text-lg font-bold">{item ? 'Edit Barang Inventaris' : 'Tambah Barang Inventaris'}</h3>
-          <button onClick={onClose}>×</button>
+          <button type="button" onClick={onClose} aria-label="Tutup">×</button>
         </div>
 
         {error && (
@@ -201,16 +223,12 @@ export default function InventarisFormModal({
             <label>Foto Barang</label>
 
             {previewFoto && (
-  <img
-    src={
-      previewFoto.startsWith('/uploads')
-      ? `http://localhost:5000${previewFoto}`
-      : previewFoto
-    }
-    className="mb-3 h-24 w-24 rounded-xl object-cover border"
-    alt="Foto barang"
-  />
-)}
+              <img
+                src={getInventarisPhotoUrl(previewFoto)}
+                className="mb-3 h-24 w-24 rounded-xl object-cover border"
+                alt="Foto barang"
+              />
+            )}
             <input
   type="file"
   accept="image/jpeg,image/png,.jpg,.jpeg,.png"

@@ -35,7 +35,7 @@ const uploadDir =
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
 });
 const imageUpload = secureImageUpload(uploadDir);
 
@@ -85,8 +85,14 @@ router.put(
 router.put(
   '/piket/dokumen/kop',
   admin,
-  upload.none(),
+  upload.single('dokumen'),
   c.updatePiketKop
+);
+
+router.get(
+  '/piket/dokumen/kop-file',
+  admin,
+  c.downloadPiketKop
 );
 
 router.post(

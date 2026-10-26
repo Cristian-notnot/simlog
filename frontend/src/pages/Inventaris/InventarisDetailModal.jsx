@@ -3,6 +3,7 @@ import { Clock } from 'lucide-react';
 import Modal from '../../components/UI/Modal';
 import KondisiBadge from '../../components/UI/KondisiBadge';
 import api from '../../api/axios';
+import { getInventarisPhotoUrl } from '../../utils/inventarisPhotoUrl';
 
 function formatWaktu(iso) {
   return new Date(iso).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
@@ -21,8 +22,8 @@ export default function InventarisDetailModal({ item, onClose }) {
   return (
     <Modal title={item.nama_barang} onClose={onClose} width="max-w-2xl">
       <div className="flex gap-5 mb-6">
-        {item.foto_url ? (
-          <img src={item.foto_url} alt={item.nama_barang} className="h-28 w-28 rounded-xl object-cover border border-slate-200" />
+        {item.foto_url || item.foto ? (
+          <img src={getInventarisPhotoUrl(item.foto_url || item.foto)} alt={item.nama_barang} className="h-28 w-28 rounded-xl object-cover border border-slate-200" />
         ) : (
           <div className="h-28 w-28 rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-400">Tanpa foto</div>
         )}

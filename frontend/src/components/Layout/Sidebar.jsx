@@ -13,6 +13,8 @@ import {
   BookOpen,
   GraduationCap,
   FileCog,
+  Users,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,7 +22,8 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
 
   { to: '/alumni', label: 'History Alumni', icon: GraduationCap, active: true, adminOnly: true },
-  { to: '/pengaturan-dokumen-piket', label: 'Data Pengurus & Kop', icon: FileCog, active: true, adminOnly: true },
+  { to: '/data-pengurus', label: 'Data Pengurus', icon: Users, active: true, adminOnly: true },
+  { to: '/pengaturan-kop-piket', label: 'Kop Surat Piket', icon: FileCog, active: true, adminOnly: true },
   {
     to: '/dashboard',
     label: 'Dashboard',
@@ -87,14 +90,23 @@ const navItems = [
 ];
 
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onNavigate = () => {}, onClose = () => {} }) {
   const { isAdmin } = useAuth();
 
   return (
 
-    <aside
-      className="hidden shrink-0 border-r border-emerald-950/20 bg-gradient-to-b from-[#174c43] to-[#123a39] text-emerald-50 md:flex md:w-64 md:flex-col"
-    >
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Tutup menu navigasi"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/40 md:hidden"
+        />
+      )}
+      <aside
+        className={`${mobileOpen ? 'fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col' : 'hidden'} shrink-0 border-r border-emerald-950/20 bg-gradient-to-b from-[#174c43] to-[#123a39] text-emerald-50 md:relative md:z-auto md:flex md:w-64 md:flex-col`}
+      >
 
 
       {/* BRAND */}
@@ -153,6 +165,15 @@ export default function Sidebar() {
 
         </div>
 
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup menu navigasi"
+          className="ml-auto mr-4 rounded-lg p-2 text-emerald-50 hover:bg-white/10 md:hidden"
+        >
+          <X size={18} />
+        </button>
+
 
       </div>
 
@@ -186,6 +207,7 @@ export default function Sidebar() {
                 <NavLink
                   key={to}
                   to={to}
+                  onClick={onNavigate}
 
                   className={({ isActive }) =>
                     `
@@ -318,7 +340,8 @@ export default function Sidebar() {
       </div>
 
 
-    </aside>
+      </aside>
+    </>
 
   );
 }

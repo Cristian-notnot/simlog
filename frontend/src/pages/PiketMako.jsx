@@ -277,8 +277,12 @@ export default function PiketMako() {
               Belum ada riwayat pelaksanaan piket.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <>
+              <p className="px-3 pt-3 text-xs text-slate-500 sm:hidden">
+                Geser tabel ke samping untuk melihat kolom lainnya.
+              </p>
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="pb-3 font-medium">Tanggal</th>
@@ -316,8 +320,9 @@ export default function PiketMako() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1,4 +1,9 @@
 const { pool } = require('../config/db');
+const fs = require('fs/promises');
+const path = require('path');
+const { randomUUID } = require('crypto');
+
+const kopUploadDir = path.resolve(__dirname, '..', '..', 'private_uploads', 'kop');
 
 const required = (value, label) => {
   if (
@@ -204,7 +209,7 @@ exports.verifyPiket = handler(async (req, res) => {
 
 exports.getPiketDocumentSettings = handler(async (req, res) => {
   const [[settings]] = await pool.query(
-    'SELECT ketua_nama, sekretaris_nama, kop_organisasi, kop_unit, kop_alamat, kop_kontak FROM piket_dokumen_settings WHERE id = 1'
+    'SELECT ketua_nama, sekretaris_nama, kop_organisasi, kop_unit, kop_alamat, kop_kontak, kop_document_name FROM piket_dokumen_settings WHERE id = 1'
   );
   res.set('Cache-Control', 'private, no-store');
   res.json(settings || {
@@ -214,6 +219,7 @@ exports.getPiketDocumentSettings = handler(async (req, res) => {
     kop_unit: 'BIDANG LOGISTIK · MAKO HW UNIMUS',
     kop_alamat: '',
     kop_kontak: '',
+    kop_document_name: null,
   });
 });
 
@@ -236,27 +242,98 @@ exports.updatePiketPengurus = handler(async (req, res) => {
 });
 
 exports.updatePiketKop = handler(async (req, res) => {
-  const fields = ['kop_organisasi', 'kop_unit', 'kop_alamat', 'kop_kontak'];
-  const values = fields.map((field) =>
-    typeof req.body[field] === 'string' ? req.body[field].trim() : ''
-  );
-  if (values.some((value) => value.length > 255)) {
-    const error = new Error('Setiap baris kop surat maksimal 255 karakter.');
+  if (!req.file) {
+    const error = new Error('Pilih dokumen Word untuk kop surat.');
     error.status = 400;
     throw error;
   }
 
-  await pool.query(
-    `INSERT INTO piket_dokumen_settings (id, kop_organisasi, kop_unit, kop_alamat, kop_kontak)
-     VALUES (1, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       kop_organisasi = VALUES(kop_organisasi),
-       kop_unit = VALUES(kop_unit),
-       kop_alamat = VALUES(kop_alamat),
-       kop_kontak = VALUES(kop_kontak)`,
-    values.map((value) => value || null)
+  const extension = path.extname(req.file.originalname).toLowerCase();
+  const signature = req.file.buffer.subarray(0, 8);
+  const isDoc = extension === '.doc' &&
+    signature.equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+  const isDocx = extension === '.docx' &&
+    signature.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+  if (!isDoc && !isDocx) {
+    const error = new Error('Berkas harus berupa dokumen Word DOC atau DOCX yang valid.');
+    error.status = 400;
+    throw error;
+  }
+
+  const originalName = path.basename(req.file.originalname.replace(/\\/g, '/'))
+    .replace(/[\u0000-\u001f"]/g, '_')
+    .slice(0, 255);
+  const storageName = `${randomUUID()}${extension}`;
+  const storedPath = path.join(kopUploadDir, storageName);
+  await fs.mkdir(kopUploadDir, { recursive: true });
+  await fs.writeFile(storedPath, req.file.buffer, { flag: 'wx' });
+
+  let previousStorageName;
+  try {
+    const [[previous]] = await pool.query(
+      'SELECT kop_document_path FROM piket_dokumen_settings WHERE id = 1'
+    );
+    previousStorageName = previous?.kop_document_path;
+    await pool.query(
+      `INSERT INTO piket_dokumen_settings (id, kop_document_name, kop_document_path)
+       VALUES (1, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         kop_document_name = VALUES(kop_document_name),
+         kop_document_path = VALUES(kop_document_path)`,
+      [originalName, storageName]
+    );
+  } catch (error) {
+    try {
+      await fs.rm(storedPath, { force: true });
+    } catch (cleanupError) {
+      console.error('[operasional] Unggahan kop yang gagal tidak dapat dibersihkan.', cleanupError);
+    }
+    throw error;
+  }
+
+  if (previousStorageName && path.basename(previousStorageName) === previousStorageName) {
+    try {
+      await fs.rm(path.join(kopUploadDir, previousStorageName), { force: true });
+    } catch (error) {
+      console.error('[operasional] Dokumen kop lama gagal dibersihkan.', error);
+    }
+  }
+
+  res.json({ message: 'Dokumen kop berhasil diunggah.', fileName: originalName });
+});
+
+exports.downloadPiketKop = handler(async (req, res) => {
+  const [[settings]] = await pool.query(
+    'SELECT kop_document_name, kop_document_path FROM piket_dokumen_settings WHERE id = 1'
   );
-  res.json({ message: 'Kop surat berhasil disimpan.' });
+  if (!settings?.kop_document_path || !settings?.kop_document_name) {
+    const error = new Error('Belum ada dokumen kop yang diunggah.');
+    error.status = 404;
+    throw error;
+  }
+
+  const storageName = path.basename(settings.kop_document_path);
+  const storedPath = path.join(kopUploadDir, storageName);
+  try {
+    await fs.access(storedPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      const notFound = new Error('Berkas dokumen kop tidak ditemukan di penyimpanan.');
+      notFound.status = 404;
+      throw notFound;
+    }
+    throw error;
+  }
+
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.download(storedPath, settings.kop_document_name, (error) => {
+    if (error) {
+      console.error('[operasional] Dokumen kop gagal diunduh.', error);
+      if (!res.headersSent) {
+        res.status(error.statusCode || 500).json({ message: 'Dokumen kop gagal diunduh.' });
+      }
+    }
+  });
 });
 
 exports.createJadwalPiket = handler(

@@ -190,7 +190,7 @@ export default function PiketQRForm() {
               </p>
             </div>
           </div>
-          <div className="relative mt-6 flex items-center gap-2 text-xs font-medium text-emerald-50/80">
+          <div className="relative mt-6 flex flex-wrap items-center gap-2 text-xs font-medium text-emerald-50/80">
             <span className={`rounded-full px-3 py-1 ${selectedSchedule ? 'bg-white/10' : 'bg-white/20 text-white'}`}>1. Pilih bidang</span>
             <span className="h-px w-6 bg-white/30" />
             <span className={`rounded-full px-3 py-1 ${selectedSchedule ? 'bg-white/20 text-white' : 'bg-white/10'}`}>2. Isi laporan</span>

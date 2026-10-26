@@ -50,6 +50,34 @@ export default function Login() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [homepageData, setHomepageData] = useState(null);
   const [selectedNews, setSelectedNews] = useState(null);
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    if (!mobileMenu) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (!headerRef.current?.contains(event.target)) setMobileMenu(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setMobileMenu(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [mobileMenu]);
+
+  useEffect(() => {
+    if (!showLogin && !selectedNews) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      setShowLogin(false);
+      setSelectedNews(null);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [showLogin, selectedNews]);
   const newsTrackRef = useRef(null);
   const newsDragRef = useRef(null);
 
@@ -269,7 +297,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+      <header ref={headerRef} className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-[72px] max-w-[1380px] items-center justify-between px-5 sm:px-7 lg:px-10">
           <button
             type="button"
@@ -741,7 +769,15 @@ export default function Login() {
       </main>
 
       {selectedNews && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-labelledby="news-title">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="news-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedNews(null);
+          }}
+        >
           <article className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white">
             <button
               type="button"
@@ -934,6 +970,9 @@ export default function Login() {
       {showLogin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-title"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               setShowLogin(false);
@@ -965,7 +1004,7 @@ export default function Login() {
               </div>
             </div>
 
-            <h2 className="mt-7 text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+            <h2 id="login-title" className="mt-7 text-2xl font-semibold tracking-[-0.02em] text-slate-900">
               Masuk ke sistem
             </h2>
 

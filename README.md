@@ -74,7 +74,9 @@ simlog/
    - `backend/database/migration_security_hardening.sql` (verifikasi laporan piket)
    - `backend/database/migration_piket_document_settings.sql` (pengaturan data pengurus dan kop surat laporan piket)
    - `backend/database/migration_alumni.sql` (data kontak dan angkatan alumni)
+   - `backend/database/migration_pengurus_kop_upload.sql` (daftar pengurus terpisah dan metadata unggahan kop Word; jalankan dengan memilih database yang sama seperti `DB_NAME` di `backend/.env`)
    - `backend/database/seed.sql` (data awal 8 bidang, ruangan, kategori, admin)
+   Migration pengurus/kop juga membuat tabel pengaturan dokumen piket jika belum ada, jadi aman dijalankan ulang setelah urutan migration sebelumnya sempat terhenti. Migration ini memakai database yang sedang dipilih di phpMyAdmin dan tidak berpindah ke database lain.
    Jika dashboard menampilkan `Unknown column 'p.diverifikasi_oleh'`, jalankan
    `migration_security_hardening.sql` pada database yang sedang dipakai, lalu muat ulang backend.
 3. Untuk menolak unggahan yang sama dengan foto piket lama yang file-nya masih tersedia, jalankan dari folder `backend`:

@@ -24,7 +24,11 @@ const emptyForm = {
 const inputClass =
   'w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100';
 
-export default function AlumniManager() {
+export default function AlumniManager({ resource = 'alumni' }) {
+  const isPengurus = resource === 'pengurus';
+  const resourceLabel = isPengurus ? 'pengurus' : 'alumni';
+  const resourceTitle = isPengurus ? 'Data Pengurus' : 'History Alumni';
+  const resourcePath = `/admin/${resource}`;
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -35,10 +39,10 @@ export default function AlumniManager() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const loadAlumni = useCallback(async () => {
+  const loadRows = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/admin/alumni', {
+      const { data } = await api.get(resourcePath, {
         params: {
           search: search.trim() || undefined,
           angkatan: angkatanFilter || undefined,
@@ -49,18 +53,18 @@ export default function AlumniManager() {
     } catch (requestError) {
       setRows([]);
       setError(
-        requestError.response?.data?.message || 'Data alumni gagal dimuat.'
+        requestError.response?.data?.message || `Data ${resourceLabel} gagal dimuat.`
       );
     } finally {
       setLoading(false);
     }
-  }, [search, angkatanFilter]);
+  }, [search, angkatanFilter, resourcePath, resourceLabel]);
 
   // Tunda pencarian 300 ms agar tidak memanggil server di setiap ketukan.
   useEffect(() => {
-    const timer = setTimeout(loadAlumni, 300);
+    const timer = setTimeout(loadRows, 300);
     return () => clearTimeout(timer);
-  }, [loadAlumni]);
+  }, [loadRows]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -95,32 +99,32 @@ export default function AlumniManager() {
     setError('');
     setNotice('');
     try {
-      const path = `/admin/alumni${editingId ? `/${editingId}` : ''}`;
+      const path = `${resourcePath}${editingId ? `/${editingId}` : ''}`;
       const { data } = await api[editingId ? 'put' : 'post'](path, form);
-      setNotice(data.message || 'Data alumni berhasil disimpan.');
+      setNotice(data.message || `Data ${resourceLabel} berhasil disimpan.`);
       resetForm();
-      await loadAlumni();
+      await loadRows();
     } catch (requestError) {
       setError(
-        requestError.response?.data?.message || 'Data alumni gagal disimpan.'
+        requestError.response?.data?.message || `Data ${resourceLabel} gagal disimpan.`
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function removeAlumni(item) {
-    if (!window.confirm(`Hapus data alumni "${item.nama_lengkap}"?`)) return;
+  async function removeRow(item) {
+    if (!window.confirm(`Hapus data ${resourceLabel} "${item.nama_lengkap}"?`)) return;
     setError('');
     setNotice('');
     try {
-      const { data } = await api.delete(`/admin/alumni/${item.id}`);
+      const { data } = await api.delete(`${resourcePath}/${item.id}`);
       if (editingId === item.id) resetForm();
-      setNotice(data.message || 'Data alumni berhasil dihapus.');
-      await loadAlumni();
+      setNotice(data.message || `Data ${resourceLabel} berhasil dihapus.`);
+      await loadRows();
     } catch (requestError) {
       setError(
-        requestError.response?.data?.message || 'Data alumni gagal dihapus.'
+        requestError.response?.data?.message || `Data ${resourceLabel} gagal dihapus.`
       );
     }
   }
@@ -134,14 +138,14 @@ export default function AlumniManager() {
         Email: item.email,
         Angkatan: item.angkatan,
       })),
-      'Data_Alumni_HW_UNIMUS'
+      `Data_${isPengurus ? 'Pengurus' : 'Alumni'}_HW_UNIMUS`
     );
   }
 
   return (
     <DashboardLayout
-      title="History Alumni"
-      subtitle="Data kontak alumni HW UNIMUS. Hanya dapat dilihat oleh admin."
+      title={resourceTitle}
+      subtitle={`Data kontak ${resourceLabel} HW UNIMUS. Hanya dapat dilihat oleh admin.`}
     >
       {error && (
         <div
@@ -169,7 +173,7 @@ export default function AlumniManager() {
             {editingId ? <Pencil size={19} /> : <Plus size={20} />}
           </span>
           <h2 className="font-semibold text-slate-900">
-            {editingId ? 'Ubah data alumni' : 'Tambah alumni'}
+            {editingId ? `Ubah data ${resourceLabel}` : `Tambah ${resourceLabel}`}
           </h2>
         </div>
 
@@ -216,19 +220,19 @@ export default function AlumniManager() {
               className={inputClass}
             />
           </label>
-<label className="grid gap-1.5 text-sm font-medium text-slate-700">
-  Angkatan
-  <input
-    required
-    type="text"
-    maxLength={100}
-    autoComplete="off"
-    value={form.angkatan}
-    onChange={(e) => setField('angkatan', e.target.value)}
-    placeholder="Contoh: Sahadya 2024"
-    className={inputClass}
-  />
-</label>
+          <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+            Angkatan
+            <input
+              required
+              type="text"
+              maxLength={100}
+              autoComplete="off"
+              value={form.angkatan}
+              onChange={(e) => setField('angkatan', e.target.value)}
+              placeholder="Contoh: Sahadya 2024"
+              className={inputClass}
+            />
+          </label>
 
         </div>
 
@@ -243,7 +247,7 @@ export default function AlumniManager() {
               ? 'Menyimpan...'
               : editingId
               ? 'Simpan perubahan'
-              : 'Tambah alumni'}
+              : `Tambah ${resourceLabel}`}
           </Button>
           {editingId && (
             <Button type="button" variant="secondary" onClick={resetForm}>
@@ -262,8 +266,8 @@ export default function AlumniManager() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, email, atau nomor telepon..."
-            aria-label="Cari alumni"
+            placeholder={`Cari nama, email, atau nomor telepon ${resourceLabel}...`}
+            aria-label={`Cari ${resourceLabel}`}
             className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           />
         </div>
@@ -288,8 +292,52 @@ export default function AlumniManager() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-[0_10px_30px_rgba(21,78,66,0.08)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="divide-y divide-emerald-50 md:hidden">
+          {loading && (
+            <p className="p-5 text-center text-sm text-slate-500">Memuat data {resourceLabel}...</p>
+          )}
+          {!loading && rows.length === 0 && (
+            <p className="p-5 text-center text-sm text-slate-500">
+              {search || angkatanFilter
+                ? `Tidak ada ${resourceLabel} yang cocok dengan pencarian.`
+                : `Belum ada data ${resourceLabel}.`}
+            </p>
+          )}
+          {!loading && rows.map((item) => (
+            <article key={item.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="break-words font-semibold text-slate-900">{item.nama_lengkap}</h3>
+                  <p className="mt-1 break-all text-sm text-slate-600">{item.email}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                  {item.angkatan}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">{item.nomor_telepon}</p>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => startEditing(item)}
+                  aria-label={`Ubah ${item.nama_lengkap}`}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                >
+                  <Pencil size={16} /> Ubah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeRow(item)}
+                  aria-label={`Hapus ${item.nama_lengkap}`}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm text-red-600"
+                >
+                  <Trash2 size={16} /> Hapus
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="bg-emerald-800 text-left text-white">
                 {['Nama lengkap', 'Nomor telepon', 'Email', 'Angkatan', 'Aksi'].map(
@@ -310,7 +358,7 @@ export default function AlumniManager() {
                   <td colSpan={5} className="p-10 text-center text-slate-400">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 size={16} className="animate-spin" />
-                      Memuat data alumni...
+                      Memuat data {resourceLabel}...
                     </span>
                   </td>
                 </tr>
@@ -320,8 +368,8 @@ export default function AlumniManager() {
                 <tr>
                   <td colSpan={5} className="p-10 text-center text-slate-500">
                     {search || angkatanFilter
-                      ? 'Tidak ada alumni yang cocok dengan pencarian.'
-                      : 'Belum ada data alumni. Tambahkan alumni pertama lewat formulir di atas.'}
+                      ? `Tidak ada ${resourceLabel} yang cocok dengan pencarian.`
+                      : `Belum ada data ${resourceLabel}. Tambahkan ${resourceLabel} pertama lewat formulir di atas.`}
                   </td>
                 </tr>
               )}
@@ -352,7 +400,7 @@ export default function AlumniManager() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => removeAlumni(item)}
+                          onClick={() => removeRow(item)}
                           aria-label={`Hapus ${item.nama_lengkap}`}
                           className="rounded-lg p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-700"
                         >
@@ -368,7 +416,7 @@ export default function AlumniManager() {
       </div>
 
       {!loading && rows.length > 0 && (
-        <p className="mt-3 text-xs text-slate-500">{rows.length} alumni ditampilkan</p>
+        <p className="mt-3 text-xs text-slate-500">{rows.length} {resourceLabel} ditampilkan</p>
       )}
     </DashboardLayout>
   );

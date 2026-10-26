@@ -233,6 +233,15 @@ export default function OperasionalModule({ type }) {
   const [documentSettings, setDocumentSettings] = useState(null);
 
   useEffect(() => {
+    if (!editItem) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setEditItem(null);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [editItem]);
+
+  useEffect(() => {
     setOpen(null);
     setActiveTab('barang');
     setFormValues(initialFormValues);
@@ -690,6 +699,104 @@ export default function OperasionalModule({ type }) {
         {config.sections.map((section) => {
           if (type === 'sewa' && section.key !== activeTab) return null;
           const rows = Array.isArray(data[section.key]) ? data[section.key] : [];
+          const piketGroups = type === 'piket' && section.key === 'pelaksanaan'
+            ? Array.from(rows.reduce((groups, row) => {
+                const groupName = row.nama_bidang || 'Bidang belum diketahui';
+                if (!groups.has(groupName)) groups.set(groupName, []);
+                groups.get(groupName).push(row);
+                return groups;
+              }, new Map()).entries())
+            : [];
+          const renderMobileValue = (row, column) => {
+            if (column === 'foto_url' && row[column]) {
+              return type === 'piket' ? (
+                <button
+                  type="button"
+                  onClick={() => handleViewPiketPhoto(row[column])}
+                  className="inline-flex min-h-9 items-center gap-1 text-teal-700"
+                >
+                  <Camera size={14} /> Lihat foto
+                </button>
+              ) : (
+                <a
+                  href={row[column]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-9 items-center gap-1 text-teal-700"
+                >
+                  <Camera size={14} /> Lihat foto
+                </a>
+              );
+            }
+            if (column === 'created_at' && row[column]) {
+              const [date, time] = String(row[column]).split(' ');
+              const [year, month, day] = date.split('-').map(Number);
+              return `${new Date(year, month - 1, day).toLocaleDateString('id-ID')} ${time?.slice(0, 5) || ''}`;
+            }
+            if (column === 'periode_valid') {
+              return Number(row[column]) ? 'Valid' : 'Periksa periode';
+            }
+            if (column === 'status_verifikasi') {
+              return Number(row[column]) ? 'Terverifikasi' : 'Menunggu verifikasi';
+            }
+            if (column.includes('tanggal') || column.includes('minggu')) {
+              return row[column] ? new Date(row[column]).toLocaleDateString('id-ID') : '-';
+            }
+            return row[column]?.toString() || '-';
+          };
+          const renderMobileActions = (row) => (
+            <>
+              {type === 'sewa' && isUserAdmin && section.key === 'barang' && (
+                <button
+                  type="button"
+                  onClick={() => setEditItem(row)}
+                  className="min-h-10 rounded-lg bg-amber-500 px-3 text-sm font-medium text-white"
+                >
+                  Edit barang
+                </button>
+              )}
+              {type === 'sewa' && isUserAdmin && section.key === 'peminjaman' && (
+                <>
+                  {row.status === 'Menunggu Persetujuan' && (
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(row.id)}
+                      className="min-h-10 rounded-lg bg-teal-600 px-3 text-sm font-medium text-white"
+                    >
+                      Setujui
+                    </button>
+                  )}
+                  {(row.status === 'Dipinjam' || row.status === 'Terlambat') && (
+                    <button
+                      type="button"
+                      onClick={() => handleReturn(row.id)}
+                      className="min-h-10 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white"
+                    >
+                      Selesai
+                    </button>
+                  )}
+                  {row.status === 'Selesai' && (
+                    <span className="self-center text-sm text-slate-500">Selesai</span>
+                  )}
+                </>
+              )}
+              {type === 'piket' && section.key === 'pelaksanaan' && isUserAdmin && !Number(row.status_verifikasi) && (
+                <button
+                  type="button"
+                  onClick={() => handleVerifyPiket(row.id)}
+                  disabled={verifyingPiketId !== null}
+                  className="min-h-10 rounded-lg bg-emerald-700 px-3 text-sm font-medium text-white disabled:bg-slate-400"
+                >
+                  {verifyingPiketId === row.id ? 'Memverifikasi...' : 'Verifikasi'}
+                </button>
+              )}
+            </>
+          );
+          const mobileRows = piketGroups.length
+            ? piketGroups.flatMap(([groupName, groupRows]) =>
+                groupRows.map((row, index) => ({ row, index, groupName }))
+              )
+            : rows.map((row, index) => ({ row, index, groupName: '' }));
           const renderRow = (row, index) => (
             <tr
               key={row.id ?? index}
@@ -799,14 +906,6 @@ export default function OperasionalModule({ type }) {
               )}
             </tr>
           );
-          const piketGroups = type === 'piket' && section.key === 'pelaksanaan'
-            ? Array.from(rows.reduce((groups, row) => {
-                const groupName = row.nama_bidang || 'Bidang belum diketahui';
-                if (!groups.has(groupName)) groups.set(groupName, []);
-                groups.get(groupName).push(row);
-                return groups;
-              }, new Map()).entries())
-            : [];
           return (
             <div
               key={section.key}
@@ -849,21 +948,57 @@ export default function OperasionalModule({ type }) {
               {rows.length === 0 ? (
                 <div className="p-5 text-sm text-gray-500">Belum ada data.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                <>
+                <div className="divide-y divide-emerald-50 md:hidden">
+                  {mobileRows.map(({ row, index, groupName }) => {
+                    const titleColumn = ['nama_barang', 'nama_pengisi', 'nama_bidang', 'nama_barang_manual', 'tanggal', 'created_at']
+                      .find((column) => section.columns.includes(column) && row[column]);
+                    return (
+                      <article key={row.id ?? `${groupName}-${index}`} className="p-4">
+                        {groupName && (
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                            Bidang: {groupName}
+                          </p>
+                        )}
+                        <h4 className="break-words font-semibold text-slate-900">
+                          {titleColumn ? renderMobileValue(row, titleColumn) : section.title}
+                        </h4>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3">
+                          {section.columns
+                            .filter((column) => column !== titleColumn)
+                            .map((column) => (
+                              <div key={column} className="min-w-0">
+                                <dt className="text-xs text-slate-500">{label(column)}</dt>
+                                <dd className="mt-0.5 break-words text-sm text-slate-800">
+                                  {renderMobileValue(row, column)}
+                                </dd>
+                              </div>
+                            ))}
+                        </dl>
+                        {(type === 'sewa' || type === 'piket') && isUserAdmin && (
+                          <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
+                            {renderMobileActions(row)}
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-max text-sm">
                     <thead className="bg-emerald-800 text-left text-xs uppercase text-emerald-50">
                       <tr>
                         {section.columns.map((column) => (
-                          <th key={column} className="px-4 py-3">
+                          <th key={column} className="whitespace-nowrap px-4 py-3">
                             {label(column)}
                           </th>
                         ))}
                         {type === 'sewa' &&
                           section.key === 'peminjaman' &&
-                          isUserAdmin && <th className="px-4 py-3">Aksi Admin</th>}
+                          isUserAdmin && <th className="whitespace-nowrap px-4 py-3">Aksi Admin</th>}
                         {type === 'piket' &&
                           section.key === 'pelaksanaan' &&
-                          isUserAdmin && <th className="px-4 py-3">Aksi Admin</th>}
+                          isUserAdmin && <th className="whitespace-nowrap px-4 py-3">Aksi Admin</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -885,6 +1020,7 @@ export default function OperasionalModule({ type }) {
                   </tbody>
                 </table>
               </div>
+                </>
                 )}
               </div>
           );
@@ -892,7 +1028,14 @@ export default function OperasionalModule({ type }) {
       </div>
 
       {editItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEditItem(null);
+          }}
+        >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-gray-100">
             <h3 className="mb-4 font-semibold text-gray-900 text-lg">Edit Inventaris Barang Sewa</h3>
             <form onSubmit={(e) => handleEditSubmit(e, editItem.id)} className="space-y-4">

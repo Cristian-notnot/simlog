@@ -31,7 +31,10 @@ export default function App() {
       <Route path="/kelola-beranda" element={<ProtectedRoute><AdminRoute><HomepageManager /></AdminRoute></ProtectedRoute>} />
       <Route path="/kelola-materi" element={<ProtectedRoute><AdminRoute><MaterialsManager /></AdminRoute></ProtectedRoute>} />
       <Route path="/alumni" element={<ProtectedRoute><AdminRoute><AlumniManager /></AdminRoute></ProtectedRoute>} />
-      <Route path="/pengaturan-dokumen-piket" element={<ProtectedRoute><AdminRoute><PiketDocumentSettings /></AdminRoute></ProtectedRoute>} />
+      <Route path="/data-pengurus" element={<ProtectedRoute><AdminRoute><AlumniManager resource="pengurus" /></AdminRoute></ProtectedRoute>} />
+      <Route path="/pengaturan-kop-piket" element={<ProtectedRoute><AdminRoute><PiketDocumentSettings /></AdminRoute></ProtectedRoute>} />
+      <Route path="/pengaturan-pengurus-piket" element={<Navigate to="/data-pengurus" replace />} />
+      <Route path="/pengaturan-dokumen-piket" element={<Navigate to="/data-pengurus" replace />} />
       <Route path="/inventaris" element={<ProtectedRoute><InventarisList /></ProtectedRoute>} />
       <Route path="/unboxing" element={<ProtectedRoute><OperasionalModule type="unboxing" /></ProtectedRoute>} />
       <Route path="/piket" element={<ProtectedRoute><AdminRoute><OperasionalModule type="piket" /></AdminRoute></ProtectedRoute>} />

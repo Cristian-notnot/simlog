@@ -15,6 +15,7 @@ import InventarisFormModal from './InventarisFormModal';
 import InventarisDetailModal from './InventarisDetailModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
+import { getInventarisPhotoUrl } from '../../utils/inventarisPhotoUrl';
 
 export default function InventarisList() {
 
@@ -155,9 +156,7 @@ export default function InventarisList() {
         </span>
       );
     }
-    const srcUrl = namaFoto.startsWith('http')
-      ? namaFoto
-      : `http://localhost:5000/uploads/${namaFoto}`;
+    const srcUrl = getInventarisPhotoUrl(namaFoto);
 
     return (
       <img
@@ -172,13 +171,6 @@ export default function InventarisList() {
         "
 
         alt={item.nama_barang}
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src =
-            `http://localhost:5000${namaFoto.startsWith('/') ? '' : '/'}${namaFoto}`;
-
-        }}
-
       />
     );
 
@@ -376,18 +368,78 @@ export default function InventarisList() {
       }
 
       {/* TABLE */}
-      <div
-
-        className="
-          overflow-hidden
-          rounded-xl
-          border
-          border-emerald-100
-          bg-white
-          shadow-[0_10px_30px_rgba(21,78,66,0.08)]
-        "
-      >
-        <table className="w-full text-sm">
+      <div className="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-[0_10px_30px_rgba(21,78,66,0.08)]">
+        <div className="divide-y divide-emerald-50 md:hidden">
+          {loading && <p className="p-5 text-center text-sm text-slate-500">Memuat data...</p>}
+          {!loading && data.length === 0 && (
+            <p className="p-5 text-center text-sm text-slate-500">Tidak ada barang inventaris.</p>
+          )}
+          {!loading && data.map((item) => (
+            <article key={item.id} className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                  {renderFoto(item)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words font-semibold text-slate-900">{item.nama_barang}</h3>
+                  <p className="mt-0.5 text-sm text-slate-500">{item.nama_kategori || 'Tanpa kategori'}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                      Jumlah: {item.jumlah}
+                    </span>
+                    <KondisiBadge kondisi={item.kondisi} />
+                  </div>
+                </div>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-sm">
+                <div className="min-w-0">
+                  <dt className="text-xs text-slate-500">Lokasi</dt>
+                  <dd className="break-words text-slate-800">{item.nama_ruangan || '—'}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-slate-500">Lokasi detail</dt>
+                  <dd className="break-words text-slate-800">{item.lokasi_detail || '—'}</dd>
+                </div>
+              </dl>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDetailItem(item)}
+                  aria-label={`Lihat ${item.nama_barang}`}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                >
+                  <Eye size={16} /> Detail
+                </button>
+                {isAdmin && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingItem(item);
+                        loadMasterData();
+                        setFormOpen(true);
+                      }}
+                      aria-label={`Edit ${item.nama_barang}`}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                    >
+                      <Pencil size={16} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      aria-label={`Hapus ${item.nama_barang}`}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm text-red-600"
+                    >
+                      <Trash2 size={16} /> Hapus
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[720px] text-sm">
 
           <thead>
 
@@ -622,7 +674,8 @@ export default function InventarisList() {
             }
 
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {
