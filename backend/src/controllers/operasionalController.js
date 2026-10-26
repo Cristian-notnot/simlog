@@ -145,12 +145,15 @@ exports.listPiket = handler(
     const [pelaksanaan] = await pool.query(`
       SELECT
         p.*,
-        b.nama_bidang
+        b.nama_bidang,
+        verifier.nama AS diverifikasi_nama
       FROM piket_pelaksanaan p
       LEFT JOIN piket_jadwal j
         ON j.id = p.jadwal_id
       LEFT JOIN bidang b
         ON b.id = COALESCE(p.bidang_id, j.bidang_id)
+      LEFT JOIN users verifier
+        ON verifier.id = p.diverifikasi_oleh
       ORDER BY
         p.tanggal DESC,
         p.id DESC
@@ -197,6 +200,63 @@ exports.verifyPiket = handler(async (req, res) => {
   }
 
   return res.json({ message: 'Laporan piket berhasil diverifikasi.' });
+});
+
+exports.getPiketDocumentSettings = handler(async (req, res) => {
+  const [[settings]] = await pool.query(
+    'SELECT ketua_nama, sekretaris_nama, kop_organisasi, kop_unit, kop_alamat, kop_kontak FROM piket_dokumen_settings WHERE id = 1'
+  );
+  res.set('Cache-Control', 'private, no-store');
+  res.json(settings || {
+    ketua_nama: '',
+    sekretaris_nama: '',
+    kop_organisasi: 'HIZBUL WATHAN UNIVERSITAS MUHAMMADIYAH SEMARANG',
+    kop_unit: 'BIDANG LOGISTIK · MAKO HW UNIMUS',
+    kop_alamat: '',
+    kop_kontak: '',
+  });
+});
+
+exports.updatePiketPengurus = handler(async (req, res) => {
+  const ketua = typeof req.body.ketua_nama === 'string' ? req.body.ketua_nama.trim() : '';
+  const sekretaris = typeof req.body.sekretaris_nama === 'string' ? req.body.sekretaris_nama.trim() : '';
+  if (ketua.length > 100 || sekretaris.length > 100) {
+    const error = new Error('Nama pengurus maksimal 100 karakter.');
+    error.status = 400;
+    throw error;
+  }
+
+  await pool.query(
+    `INSERT INTO piket_dokumen_settings (id, ketua_nama, sekretaris_nama)
+     VALUES (1, ?, ?)
+     ON DUPLICATE KEY UPDATE ketua_nama = VALUES(ketua_nama), sekretaris_nama = VALUES(sekretaris_nama)`,
+    [ketua || null, sekretaris || null]
+  );
+  res.json({ message: 'Data pengurus berhasil disimpan.' });
+});
+
+exports.updatePiketKop = handler(async (req, res) => {
+  const fields = ['kop_organisasi', 'kop_unit', 'kop_alamat', 'kop_kontak'];
+  const values = fields.map((field) =>
+    typeof req.body[field] === 'string' ? req.body[field].trim() : ''
+  );
+  if (values.some((value) => value.length > 255)) {
+    const error = new Error('Setiap baris kop surat maksimal 255 karakter.');
+    error.status = 400;
+    throw error;
+  }
+
+  await pool.query(
+    `INSERT INTO piket_dokumen_settings (id, kop_organisasi, kop_unit, kop_alamat, kop_kontak)
+     VALUES (1, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       kop_organisasi = VALUES(kop_organisasi),
+       kop_unit = VALUES(kop_unit),
+       kop_alamat = VALUES(kop_alamat),
+       kop_kontak = VALUES(kop_kontak)`,
+    values.map((value) => value || null)
+  );
+  res.json({ message: 'Kop surat berhasil disimpan.' });
 });
 
 exports.createJadwalPiket = handler(

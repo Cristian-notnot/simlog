@@ -1,0 +1,16 @@
+USE simlog_hw_unimus;
+
+CREATE TABLE IF NOT EXISTS alumni (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nama_lengkap VARCHAR(150) NOT NULL,
+  nomor_telepon VARCHAR(30) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  angkatan VARCHAR(100) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_alumni_angkatan (angkatan),
+  INDEX idx_alumni_nama (nama_lengkap)
+) ENGINE=InnoDB;
+
+ALTER TABLE alumni
+  MODIFY COLUMN angkatan VARCHAR(100) NOT NULL;

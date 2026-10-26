@@ -3,8 +3,9 @@ import DashboardLayout from '../components/Layout/DashboardLayout';
 import Button from '../components/UI/Button';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { Camera, FileSpreadsheet } from 'lucide-react';
+import { Camera, FileSpreadsheet, FileText } from 'lucide-react';
 import { exportToExcel } from '../utils/exportToExcel';
+import { exportPiketToDoc } from '../utils/exportPiketToDoc';
 import QRCode from 'qrcode';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -46,7 +47,7 @@ const configs = {
       {
         key: 'pelaksanaan',
         title: 'Pelaksanaan Terbaru',
-        columns: ['created_at', 'nama_bidang', 'nama_pengisi', 'status', 'status_verifikasi', 'foto_url', 'catatan'],
+        columns: ['created_at', 'nama_bidang', 'nama_pengisi', 'status', 'status_verifikasi', 'diverifikasi_nama', 'foto_url', 'catatan'],
       },
     ],
     forms: [
@@ -228,6 +229,8 @@ export default function OperasionalModule({ type }) {
     const [editItem, setEditItem] = useState(null); //
   const [formValues, setFormValues] = useState(initialFormValues);
   const [piketQr, setPiketQr] = useState('');
+  const [verifyingPiketId, setVerifyingPiketId] = useState(null);
+  const [documentSettings, setDocumentSettings] = useState(null);
 
   useEffect(() => {
     setOpen(null);
@@ -266,6 +269,15 @@ export default function OperasionalModule({ type }) {
         setData({ data: moduleRes.data });
       } else {
         setData(moduleRes.data || {});
+      }
+      if (type === 'piket' && (isAdmin || user?.role === 'admin_logistik')) {
+        try {
+          const { data: settings } = await api.get('/operasional/piket/dokumen');
+          setDocumentSettings(settings);
+        } catch (settingsError) {
+          setDocumentSettings(null);
+          setError(settingsError.response?.data?.message || 'Pengaturan dokumen belum dapat dimuat.');
+        }
       }
 
       try {
@@ -313,13 +325,18 @@ export default function OperasionalModule({ type }) {
   };
 
   const handleVerifyPiket = async (id) => {
+    if (verifyingPiketId !== null) return;
     try {
       setError('');
+      setNotice('');
+      setVerifyingPiketId(id);
       const res = await api.put(`/operasional/piket/pelaksanaan/${id}/verifikasi`);
       await load();
       setNotice(res.data.message || 'Laporan piket berhasil diverifikasi.');
     } catch (err) {
       setError(err.response?.data?.message || 'Gagal memverifikasi laporan piket.');
+    } finally {
+      setVerifyingPiketId(null);
     }
   };
 
@@ -454,6 +471,20 @@ export default function OperasionalModule({ type }) {
     }));
     const reportName = type === 'piket' ? 'Piket_Mako' : 'Unboxing_Mako';
     exportToExcel(formattedRows, `Laporan_${reportName}_${section.key}`);
+  };
+
+  const handleExportPiketDoc = (rows) => {
+    if (!documentSettings) {
+      setError('Pengaturan dokumen belum dimuat. Periksa migrasi basis data lalu muat ulang halaman.');
+      return;
+    }
+    try {
+      exportPiketToDoc(rows, documentSettings);
+      setError('');
+      setNotice('Dokumen laporan piket berhasil diunduh.');
+    } catch (err) {
+      setError(err.message || 'Dokumen laporan piket gagal dibuat.');
+    }
   };
 
   const handleViewPiketPhoto = async (url) => {
@@ -701,6 +732,8 @@ export default function OperasionalModule({ type }) {
                     Number(row[column])
                       ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Terverifikasi</span>
                       : <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Menunggu verifikasi</span>
+                  ) : column === 'diverifikasi_nama' ? (
+                    row[column] || '-'
                   ) : column.includes('tanggal') ||
                     column.includes('minggu') ? (
                     row[column]
@@ -755,9 +788,11 @@ export default function OperasionalModule({ type }) {
                     <button
                       type="button"
                       onClick={() => handleVerifyPiket(row.id)}
-                      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800"
+                      disabled={verifyingPiketId !== null}
+                      aria-label={`Verifikasi laporan piket ${row.nama_pengisi || ''}`}
+                      className="inline-flex min-w-24 items-center justify-center rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:bg-slate-400"
                     >
-                      Verifikasi
+                      {verifyingPiketId === row.id ? 'Memverifikasi...' : 'Verifikasi'}
                     </button>
                   )}
                 </td>
@@ -796,12 +831,17 @@ export default function OperasionalModule({ type }) {
                 {(type === 'piket' || type === 'unboxing') && (
                   <button
                     type="button"
-                    onClick={() => handleExport(section, rows)}
-                    disabled={rows.length === 0}
+                    onClick={() => type === 'piket' && section.key === 'pelaksanaan'
+                      ? handleExportPiketDoc(rows)
+                      : handleExport(section, rows)}
+                    disabled={rows.length === 0 || (type === 'piket' && section.key === 'pelaksanaan' && !documentSettings)}
                     className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
-                    <FileSpreadsheet size={16} />
-                    Ekspor Excel
+                    {type === 'piket' && section.key === 'pelaksanaan' ? (
+                      <><FileText size={16} /> Ekspor Word (.doc)</>
+                    ) : (
+                      <><FileSpreadsheet size={16} /> Ekspor Excel</>
+                    )}
                   </button>
                 )}
               </div>

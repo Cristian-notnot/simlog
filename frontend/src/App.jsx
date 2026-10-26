@@ -12,6 +12,8 @@ import Materials from './pages/Materials';
 import PiketQRForm from './pages/PiketQRForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
+import AlumniManager from './pages/AlumniManager';
+import PiketDocumentSettings from './pages/PiketDocumentSettings';
 
 function AdminRoute({ children }) {
   const { isAdmin } = useAuth();
@@ -28,17 +30,16 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/kelola-beranda" element={<ProtectedRoute><AdminRoute><HomepageManager /></AdminRoute></ProtectedRoute>} />
       <Route path="/kelola-materi" element={<ProtectedRoute><AdminRoute><MaterialsManager /></AdminRoute></ProtectedRoute>} />
+      <Route path="/alumni" element={<ProtectedRoute><AdminRoute><AlumniManager /></AdminRoute></ProtectedRoute>} />
+      <Route path="/pengaturan-dokumen-piket" element={<ProtectedRoute><AdminRoute><PiketDocumentSettings /></AdminRoute></ProtectedRoute>} />
       <Route path="/inventaris" element={<ProtectedRoute><InventarisList /></ProtectedRoute>} />
       <Route path="/unboxing" element={<ProtectedRoute><OperasionalModule type="unboxing" /></ProtectedRoute>} />
-      <Route path="/piket" element={<ProtectedRoute><OperasionalModule type="piket" /></ProtectedRoute>} />
+      <Route path="/piket" element={<ProtectedRoute><AdminRoute><OperasionalModule type="piket" /></AdminRoute></ProtectedRoute>} />
       <Route path="/sewa" element={<ProtectedRoute><OperasionalModule type="sewa" /></ProtectedRoute>} />
       <Route path="/pengadaan" element={<ProtectedRoute><OperasionalModule type="pengadaan" /></ProtectedRoute>} />
       <Route path="/revitalisasi" element={<ProtectedRoute><OperasionalModule type="revitalisasi" /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/laporan" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-
-      {/* Rute modul fase berikutnya akan ditambahkan di sini:
-          /unboxing, /piket, /sewa, /pengadaan, /revitalisasi, /laporan */}
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

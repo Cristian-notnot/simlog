@@ -11,11 +11,16 @@ import {
   FileBarChart2,
   PanelsTopLeft,
   BookOpen,
+  GraduationCap,
+  FileCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 
 const navItems = [
+
+  { to: '/alumni', label: 'History Alumni', icon: GraduationCap, active: true, adminOnly: true },
+  { to: '/pengaturan-dokumen-piket', label: 'Data Pengurus & Kop', icon: FileCog, active: true, adminOnly: true },
   {
     to: '/dashboard',
     label: 'Dashboard',
@@ -53,6 +58,7 @@ const navItems = [
     label: 'Piket Mako',
     icon: CalendarClock,
     active: true,
+    adminOnly: true,
   },
   {
     to: '/sewa',

@@ -72,7 +72,11 @@ simlog/
    - `backend/database/migration_materi.sql` (tabel materi publik)
    - `backend/database/migration_piket_qr.sql` (keamanan foto, anti-duplikasi, dan dukungan form QR)
    - `backend/database/migration_security_hardening.sql` (verifikasi laporan piket)
+   - `backend/database/migration_piket_document_settings.sql` (pengaturan data pengurus dan kop surat laporan piket)
+   - `backend/database/migration_alumni.sql` (data kontak dan angkatan alumni)
    - `backend/database/seed.sql` (data awal 8 bidang, ruangan, kategori, admin)
+   Jika dashboard menampilkan `Unknown column 'p.diverifikasi_oleh'`, jalankan
+   `migration_security_hardening.sql` pada database yang sedang dipakai, lalu muat ulang backend.
 3. Untuk menolak unggahan yang sama dengan foto piket lama yang file-nya masih tersedia, jalankan dari folder `backend`:
 
    ```bash

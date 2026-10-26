@@ -69,6 +69,26 @@ router.put(
   c.verifyPiket
 );
 
+router.get(
+  '/piket/dokumen',
+  admin,
+  c.getPiketDocumentSettings
+);
+
+router.put(
+  '/piket/dokumen/pengurus',
+  admin,
+  upload.none(),
+  c.updatePiketPengurus
+);
+
+router.put(
+  '/piket/dokumen/kop',
+  admin,
+  upload.none(),
+  c.updatePiketKop
+);
+
 router.post(
   '/piket/jadwal',
   admin,
